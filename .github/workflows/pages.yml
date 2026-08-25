@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Compilar e publicar o Relatório GD
 
 on:
   push:
@@ -12,24 +12,49 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: github-pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build-and-deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Baixar o código
         uses: actions/checkout@v4
-      - name: Setup Pages
+
+      - name: Preparar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Preparar o pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Instalar as dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Validar o projeto
+        run: |
+          pnpm test
+          pnpm check
+
+      - name: Gerar a versão publicada
+        run: pnpm build
+
+      - name: Preparar a publicação
         uses: actions/configure-pages@v5
-      - name: Upload site artifact
+
+      - name: Enviar os arquivos prontos
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
-      - name: Deploy to GitHub Pages
+          path: dist/public
+
+      - name: Publicar no GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
